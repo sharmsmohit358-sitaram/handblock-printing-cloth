@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server";
+export async function POST(req: Request) { const { token } = await req.json(); const expected = process.env.ADMIN_TOKEN || ""; if (!expected || token !== expected) return NextResponse.json({ ok: false }, { status: 401 }); const r = NextResponse.json({ ok: true }); r.cookies.set("hpc-admin", token, { httpOnly: true, path: "/", maxAge: 86400 }); return r; }

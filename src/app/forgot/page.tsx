@@ -1,0 +1,5 @@
+"use client";
+import { useState } from "react";
+export default function Forgot() { const [email, setEmail] = useState(""); const [msg, setMsg] = useState(""); const [token, setToken] = useState("");
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); const r = await fetch("/api/auth/forgot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }); const j = await r.json(); setMsg(j.message); if (j.devResetToken) setToken(j.devResetToken); };
+  return (<div className="bg-white p-6 rounded-2xl border border-sand max-w-md"><h1 className="text-2xl font-bold">Forgot password</h1><form onSubmit={submit} className="space-y-3 mt-4"><input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="border rounded-lg px-3 py-2 w-full" /><button className="bg-indigo2 text-white px-5 py-3 rounded-full w-full">Send reset link</button></form>{msg && <p className="text-sm mt-3">{msg}</p>}{token && <p className="text-sm mt-2 break-all">Development token: <a className="underline text-indigo2" href={`/reset?token=${token}`}>Reset password →</a></p>}</div>); }

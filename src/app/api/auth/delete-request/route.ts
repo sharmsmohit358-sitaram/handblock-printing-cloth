@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { run, uid } from "@/lib/db";
+import { userFromCookieHeader, audit } from "@/lib/auth";
+export async function POST(req: Request) { const u = userFromCookieHeader(req.headers.get("cookie")); if (!u) return NextResponse.json({ ok: false, error: "Not logged in." }, { status: 401 }); const { reason } = await req.json().catch(() => ({})); run("INSERT INTO deletion_requests VALUES(?,?,?,?)", uid("del_"), u.id, String(reason || ""), new Date().toISOString()); audit(u.email, "delete_request", u.id); return NextResponse.json({ ok: true, message: "Deletion request recorded. An admin must confirm it before the account is removed — this is intentional, so a request alone does not delete order records needed for tax/invoice history." }); }

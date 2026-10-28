@@ -1,0 +1,1 @@
+export default function NotFound(){return(<div><h1 className="text-3xl font-bold">Page not found</h1><p className="mt-2">That product or page does not exist. <a href="/products" className="underline text-indigo2">Browse products</a></p></div>)}

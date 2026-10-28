@@ -1,0 +1,21 @@
+// Canonical Postgres design. Local runtime mirrors these tables in SQLite
+// because the Prisma engine binary download is unreachable from this VM
+// (ECONNRESET, verified 27 Oct 2026). See README "Database" section.
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client { provider = "prisma-client-js" }
+enum Role { CUSTOMER ADMIN STAFF }
+enum ProductType { FABRIC BEDSHEET HOME CLOTHING }
+enum OrderStatus { PLACED CONFIRMED PROCESSING PACKED SHIPPED OUT_FOR_DELIVERY DELIVERED CANCELLED FAILED_DELIVERY RETURNED RTO REFUNDED }
+model User { id String @id @default(cuid()); email String @unique; passwordHash String; name String; role Role @default(CUSTOMER); createdAt DateTime @default(now()); addresses Address[]; orders Order[] }
+model Address { id String @id @default(cuid()); userId String; user User @relation(fields:[userId], references:[id]); name String; line1 String; city String; state String; pincode String; phone String }
+model Category { id String @id @default(cuid()); slug String @unique; name String; parentId String?; description String?; products Product[] }
+model Product { id String @id @default(cuid()); slug String @unique; name String; type ProductType; categoryId String; category Category @relation(fields:[categoryId], references:[id]); description String; material String; printTechnique String; pattern String; color String; widthCm Int?; gsm Int?; pricePaise Int; minCm Int @default(50); maxCm Int @default(10000); incrementCm Int @default(50); tiersJson String @default("[]"); image String; washCare String; origin String; isActive Boolean @default(true); variants Variant[]; rolls FabricRoll[] }
+model Variant { id String @id @default(cuid()); productId String; product Product @relation(fields:[productId], references:[id]); name String; dimensions String; includes String; pricePaise Int; stock Int }
+model FabricRoll { id String @id @default(cuid()); productId String; product Product @relation(fields:[productId], references:[id]); rollCode String; lot String; originalCm Int; remainingCm Int; warehouse String }
+model Coupon { id String @id @default(cuid()); code String @unique; percentOff Int @default(0); flatPaise Int @default(0); minSubtotalPaise Int @default(0); active Boolean @default(true) }
+model Order { id String @id @default(cuid()); number String @unique; userId String?; user User? @relation(fields:[userId], references:[id]); status OrderStatus @default(PLACED); subtotalPaise Int; discountPaise Int; taxPaise Int; shippingPaise Int; totalPaise Int; paymentMethod String; paymentStatus String; addressJson String; pincode String; items OrderItem[]; createdAt DateTime @default(now()) }
+model OrderItem { id String @id @default(cuid()); orderId String; order Order @relation(fields:[orderId], references:[id]); productId String; nameSnapshot String; sku String; unitPricePaise Int; quantityCm Int?; quantity Int @default(1); totalPaise Int; cutInstructions String; rollId String? }
+model Review { id String @id @default(cuid()); productId String; author String; rating Int; body String; verified Boolean @default(false) }
+model WholesaleInquiry { id String @id @default(cuid()); businessName String; contactName String; email String; gstin String?; message String; createdAt DateTime @default(now()) }
+model Subscriber { id String @id @default(cuid()); email String @unique; createdAt DateTime @default(now()) }
+model AuditLog { id String @id @default(cuid()); actor String; action String; detail String; createdAt DateTime @default(now()) }

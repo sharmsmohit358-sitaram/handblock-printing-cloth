@@ -1,0 +1,1 @@
+export default function P(){return(<div><h1 className="text-3xl font-bold">Contact Us</h1><p className="mt-3">For order support, include your order number (for example HPC…). Wholesale enquiries go through the wholesale page so GSTIN and business details are captured.</p></div>)}
