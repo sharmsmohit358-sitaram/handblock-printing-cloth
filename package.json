@@ -8,11 +8,13 @@
     "start": "next start",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "tsx --test tests/pricing.test.ts tests/razorpay.test.ts tests/restore.test.ts"
+    "test": "tsx --test tests/pricing.test.ts tests/razorpay.test.ts tests/restore.test.ts tests/bigship.test.ts tests/fulfilment.test.ts tests/email.test.ts tests/returns.test.ts tests/upload.test.ts tests/cron.test.ts tests/coupons.test.ts tests/reporting.test.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
+    "mysql2": "^3.24.6",
     "next": "14.2.35",
+    "nodemailer": "^10.2.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "zod": "3.23.8"

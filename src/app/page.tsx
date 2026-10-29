@@ -1,8 +1,8 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import { listProducts, listCategories } from "@/lib/catalog";
-export default function Home() {
-  const fabrics = listProducts({ type: "FABRIC" }); const beds = listProducts({ type: "BEDSHEET" }); const all = listProducts({}); const cats = listCategories();
+export default async function Home() {
+  const fabrics = await listProducts({ type: "FABRIC" }); const beds = await listProducts({ type: "BEDSHEET" }); const all = await listProducts({}); const cats = await listCategories();
   return (<div className="space-y-12">
     <section className="bg-indigo2 text-white rounded-3xl p-8 md:p-12 grid md:grid-cols-2 gap-8 items-center">
       <div><h1 className="text-4xl md:text-5xl leading-tight">Handblock-printed fabric, by the metre.</h1><p className="mt-4 text-lg text-sand">Choose your length in 0.5 m steps, get one continuous cut, and pay only for what you order — plus bedsheets and home textiles made from the same craft.</p><div className="flex gap-3 mt-6"><Link href="/products?type=FABRIC" className="bg-terracotta px-5 py-3 rounded-full font-semibold">Shop Fabric by Metre</Link><Link href="/products?type=BEDSHEET" className="bg-white text-indigo2 px-5 py-3 rounded-full font-semibold">Shop Bedsheets</Link></div></div>

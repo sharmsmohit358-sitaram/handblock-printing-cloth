@@ -1,12 +1,21 @@
 import "./globals.css";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { row } from "@/lib/db";
+import { rowAsync } from "@/lib/db";
 import type { ReactNode } from "react";
-export const metadata = { title: "Handblock Printing Cloth — Handblock Printed Fabric by the Metre", description: "Handblock-printed cotton fabric by the metre, bedsheets and home textiles from Jaipur, India." };
-export default function RootLayout({ children }: { children: ReactNode }) {
-  const token = cookies().get("hpc-session")?.value; const sess = token ? row<{ userId: string; expiresAt: string }>("SELECT * FROM sessions WHERE token=?", token) : undefined; const loggedIn = !!(sess && new Date(sess.expiresAt) > new Date());
+const SITE = (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+export const metadata = {
+  metadataBase: new URL(SITE),
+  title: "Handblock Printing Cloth — Handblock Printed Fabric by the Metre",
+  description: "Handblock-printed cotton fabric by the metre, bedsheets and home textiles from Jaipur, India.",
+  openGraph: { title: "Handblock Printing Cloth", description: "Handblock-printed cotton fabric by the metre, bedsheets and home textiles.", type: "website", siteName: "Handblock Printing Cloth" },
+  twitter: { card: "summary_large_image", title: "Handblock Printing Cloth", description: "Handblock-printed cotton fabric by the metre, bedsheets and home textiles." },
+};
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const token = cookies().get("hpc-session")?.value; const sess = token ? await rowAsync<{ userId: string; expiresAt: string }>("SELECT * FROM sessions WHERE token=?", token) : undefined; const loggedIn = !!(sess && new Date(sess.expiresAt) > new Date());
+  const orgJsonLd = { "@context": "https://schema.org", "@type": "Organization", name: "Handblock Printing Cloth", url: SITE, description: "Handblock-printed cotton fabric by the metre, bedsheets and home textiles from Jaipur, India." };
   return (<html lang="en"><body>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
     <div className="bg-indigo2 text-white text-center text-sm py-2 px-4">Free shipping over ₹1,999 · Handblock-printed textiles, cut to your length</div>
     <header className="sticky top-0 bg-ivory/95 backdrop-blur border-b border-sand z-10"><div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4 flex-wrap">
       <Link href="/" className="font-bold text-xl text-indigo2">Handblock Printing Cloth</Link>

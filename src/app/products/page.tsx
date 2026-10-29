@@ -1,8 +1,8 @@
 import ProductCard from "@/components/ProductCard";
 import { listProducts, listCategories } from "@/lib/catalog";
-export default function ProductsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
-  const products = listProducts({ search: searchParams.q, category: searchParams.category, material: searchParams.material, color: searchParams.color, type: searchParams.type, sort: searchParams.sort });
-  const cats = listCategories();
+export default async function ProductsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+  const products = await listProducts({ search: searchParams.q, category: searchParams.category, material: searchParams.material, color: searchParams.color, type: searchParams.type, sort: searchParams.sort });
+  const cats = await listCategories();
   return (<div><h1 className="text-3xl font-bold">All Products</h1><p className="text-gray-600 mt-1">{products.length} product(s) found. Filters use the URL — share or bookmark a filtered view.</p>
     <form className="flex flex-wrap gap-2 mt-4 bg-white p-4 rounded-2xl border border-sand">
       <input name="q" defaultValue={searchParams.q || ""} placeholder="Search…" className="border rounded-lg px-3 py-2" />

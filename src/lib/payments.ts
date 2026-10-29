@@ -38,9 +38,24 @@ export async function fetchRazorpayPayment(paymentId: string): Promise<{ id: str
 }
 export type ShipResult = { serviceable: boolean; etaDays: number | null; provider: string; note: string };
 export async function checkShipping(pincode: string): Promise<ShipResult> {
-  if (process.env.SHIPROCKET_EMAIL && process.env.SHIPROCKET_PASSWORD) {
-    return { serviceable: true, etaDays: null, provider: "shiprocket (credentials present; live courier check requires a Shiprocket token exchange at deploy time)", note: "Live Shiprocket serviceability is not verified in this build without a token." };
-  }
+  // Bigship (user choice, 28 Oct 2026) replaces the old Shiprocket placeholder.
+  // Live check needs BIGSHIP_* credentials + BIGSHIP_PICKUP_PINCODE in .env.
+  // Without them, fall back to the labelled local rule — never fake a courier.
   const ok = /^[1-9][0-9]{5}$/.test(pincode);
-  return { serviceable: ok, etaDays: ok ? 5 : null, provider: "local-rule (Shiprocket not configured)", note: ok ? "Estimated 5 days by the local rule. Shiprocket credentials are not set, so this is an estimate, not a courier confirmation." : "Enter a valid 6-digit Indian pincode." };
+  if (!ok) return { serviceable: false, etaDays: null, provider: "local-rule", note: "Enter a valid 6-digit Indian pincode." };
+  if (process.env.BIGSHIP_USERNAME && process.env.BIGSHIP_PASSWORD && process.env.BIGSHIP_ACCESS_KEY && process.env.BIGSHIP_PICKUP_PINCODE) {
+    try {
+      const { bigshipRateCalculator } = await import("./bigship");
+      const rates = await bigshipRateCalculator({
+        sourcePincode: process.env.BIGSHIP_PICKUP_PINCODE, destPincode: pincode,
+        invoiceValueRupees: 1000, paymentModeId: 1, boxes: [{ length: 40, breadth: 30, height: 10, weightKg: 1, count: 1 }],
+      });
+      if (rates.length === 0) return { serviceable: false, etaDays: null, provider: "bigship", note: "Bigship returned no serviceable couriers for this pincode." };
+      const tats = rates.map((r) => Number(r.tat)).filter((n) => Number.isFinite(n));
+      return { serviceable: true, etaDays: tats.length ? Math.min(...tats) : null, provider: "bigship", note: `Deliverable via Bigship — ${rates.length} courier option(s), fastest ${tats.length ? Math.min(...tats) : "?"} day(s). Rates are live; final charge is set when the shipment is placed.` };
+    } catch (e) {
+      return { serviceable: true, etaDays: 5, provider: "bigship (live check failed, local estimate)", note: `Bigship live check failed (${(e as Error).message.slice(0, 120)}). Showing local 5-day estimate only — not a courier confirmation.` };
+    }
+  }
+  return { serviceable: ok, etaDays: ok ? 5 : null, provider: "local-rule (Bigship not configured)", note: ok ? "Estimated 5 days by the local rule. Bigship credentials are not set, so this is an estimate, not a courier confirmation." : "Enter a valid 6-digit Indian pincode." };
 }

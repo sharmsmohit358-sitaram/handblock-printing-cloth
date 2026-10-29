@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { row, run, uid } from "@/lib/db";
+import { rowAsync, runAsync, uid } from "@/lib/db";
 import { verifyRazorpaySignature, fetchRazorpayPayment } from "@/lib/payments";
 import { audit } from "@/lib/auth";
 const Body = z.object({ orderNumber: z.string(), razorpay_order_id: z.string(), razorpay_payment_id: z.string(), razorpay_signature: z.string() });
 export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null)); if (!p.success) return NextResponse.json({ ok: false, error: "Missing payment verification fields." }, { status: 400 });
-  const o = row<{ id: string; totalPaise: number; paymentMethod: string; paymentStatus: string; providerOrderId: string | null }>("SELECT * FROM orders WHERE number=?", p.data.orderNumber); if (!o) return NextResponse.json({ ok: false, error: "Order not found." }, { status: 404 });
+  const o = await rowAsync<{ id: string; totalPaise: number; paymentMethod: string; paymentStatus: string; providerOrderId: string | null }>("SELECT * FROM orders WHERE number=?", p.data.orderNumber); if (!o) return NextResponse.json({ ok: false, error: "Order not found." }, { status: 404 });
   if (o.paymentStatus === "PAID") return NextResponse.json({ ok: true, alreadyPaid: true, message: "Order was already marked paid — duplicate verification ignored." });
   if (o.paymentMethod !== "PREPAID") return NextResponse.json({ ok: false, error: "This order is not a prepaid order." }, { status: 400 });
   if (o.providerOrderId && o.providerOrderId !== p.data.razorpay_order_id) return NextResponse.json({ ok: false, error: "Razorpay order id does not match this order." }, { status: 400 });
@@ -19,8 +19,14 @@ export async function POST(req: Request) {
   }
   // Record the event first, then mark paid, so a failure between the two
   // still leaves a retryable state (INSERT OR IGNORE + alreadyPaid check).
-  run("INSERT OR IGNORE INTO payment_events VALUES(?,?,?,?,?)", p.data.razorpay_payment_id, p.data.orderNumber, "verify.captured", JSON.stringify({ razorpay_order_id: p.data.razorpay_order_id }), new Date().toISOString());
-  run("UPDATE orders SET paymentStatus='PAID', status='CONFIRMED', razorpayPaymentId=? WHERE number=?", p.data.razorpay_payment_id, p.data.orderNumber);
-  audit("payments", "verify_paid", p.data.orderNumber);
+  await runAsync("INSERT OR IGNORE INTO payment_events VALUES(?,?,?,?,?)", p.data.razorpay_payment_id, p.data.orderNumber, "verify.captured", JSON.stringify({ razorpay_order_id: p.data.razorpay_order_id }), new Date().toISOString());
+  await runAsync("UPDATE orders SET paymentStatus='PAID', status='CONFIRMED', razorpayPaymentId=? WHERE number=?", p.data.razorpay_payment_id, p.data.orderNumber);
+  await audit("payments", "verify_paid", p.data.orderNumber);
+  try {
+    const full = await rowAsync<{ addressJson: string; userId: string | null; totalPaise: number }>("SELECT addressJson,userId,totalPaise FROM orders WHERE number=?", p.data.orderNumber);
+    const addr = JSON.parse(full?.addressJson || "{}") as { email?: string };
+    const toEmail = addr.email || (full?.userId ? (await rowAsync<{ email: string }>("SELECT email FROM users WHERE id=?", full.userId))?.email : "") || "";
+    if (toEmail) { const { sendEmail, orderEmail } = await import("@/lib/email"); await sendEmail(orderEmail(toEmail, "paid", { number: p.data.orderNumber, totalPaise: full?.totalPaise || 0 })); }
+  } catch { /* email failure must not undo a verified payment */ }
   return NextResponse.json({ ok: true, message: "Payment verified and order confirmed." });
 }
